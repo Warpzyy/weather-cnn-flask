@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klasifikasi Kondisi Cuaca - CNN</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .main-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .header-section {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 20px 20px 0 0;
+            padding: 30px;
+            color: white;
+            text-align: center;
+        }
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9ff;
+        }
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f0ff;
+        }
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e8e8ff;
+        }
+        .preview-img {
+            max-height: 300px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .result-card {
+            background: linear-gradient(135deg, #f8f9ff, #e8e8ff);
+            border-radius: 15px;
+            padding: 25px;
+            border: 2px solid #667eea;
+        }
+        .confidence-bar {
+            height: 12px;
+            border-radius: 10px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+        .top3-item {
+            background: white;
+            border-radius: 10px;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .btn-predict {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 10px;
+            padding: 12px 40px;
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            transition: all 0.3s;
+        }
+        .btn-predict:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102,126,234,0.5);
+            color: white;
+        }
+        .weather-emoji {
+            font-size: 60px;
+        }
+        #loading {
+            display: none;
+        }
+        #result-section {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="main-card">
+                    <!-- Header -->
+                    <div class="header-section">
+                        <h1 class="fw-bold mb-2">🌤️ Weather Classifier</h1>
+                        <h5 class="mb-1">Klasifikasi Kondisi Cuaca</h5>
+                        <p class="mb-0 opacity-75">Menggunakan Convolutional Neural Network (CNN)</p>
+                        <small class="opacity-50">By: Wifa Saputra Mahendra</small>
+                    </div>
+
+                    <div class="p-4">
+                        <!-- Upload Area -->
+                        <div class="upload-area mb-4" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                            <h5 class="text-primary">Klik atau Drag & Drop Gambar</h5>
+                            <p class="text-muted mb-0">Format: JPG, PNG, JPEG (Max 10MB)</p>
+                            <input type="file" id="fileInput" accept="image/*" style="display:none">
+                        </div>
+
+                        <!-- Preview -->
+                        <div id="preview-section" class="text-center mb-4" style="display:none">
+                            <img id="preview-img" class="preview-img mb-3" src="" alt="Preview">
+                            <br>
+                            <button class="btn btn-predict" onclick="predictImage()">
+                                <i class="fas fa-search me-2"></i>Klasifikasikan Cuaca!
+                            </button>
+                            <button class="btn btn-outline-secondary ms-2" onclick="resetForm()">
+                                <i class="fas fa-redo me-2"></i>Reset
+                            </button>
+                        </div>
+
+                        <!-- Loading -->
+                        <div id="loading" class="text-center py-4">
+                            <div class="spinner-border text-primary" style="width:3rem;height:3rem"></div>
+                            <p class="mt-3 text-primary fw-bold">🔍 Menganalisis gambar...</p>
+                        </div>
+
+                        <!-- Result -->
+                        <div id="result-section">
+                            <div class="result-card">
+                                <div class="text-center mb-4">
+                                    <div class="weather-emoji" id="result-emoji"></div>
+                                    <h2 class="fw-bold text-primary mt-2" id="result-label-id"></h2>
+                                    <p class="text-muted" id="result-label-en"></p>
+                                </div>
+
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="fw-bold">Tingkat Keyakinan</span>
+                                        <span class="fw-bold text-primary" id="result-confidence"></span>
+                                    </div>
+                                    <div class="progress" style="height:12px;border-radius:10px">
+                                        <div class="confidence-bar progress-bar" id="confidence-bar" role="progressbar"></div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h6 class="fw-bold mb-3">🏆 Top 3 Prediksi:</h6>
+                                    <div id="top3-container"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Info Kelas -->
+                        <div class="mt-4">
+                            <h6 class="fw-bold text-muted">📋 11 Kelas Cuaca yang Dapat Dideteksi:</h6>
+                            <div class="d-flex flex-wrap gap-2 mt-2">
+                                <span class="badge bg-primary">💧 Embun</span>
+                                <span class="badge bg-secondary">🌫️ Kabut</span>
+                                <span class="badge bg-info">🧊 Frost</span>
+                                <span class="badge bg-light text-dark">🌨️ Glaze</span>
+                                <span class="badge bg-dark">🌧️ Hujan Es</span>
+                                <span class="badge bg-warning text-dark">⚡ Petir</span>
+                                <span class="badge bg-primary">🌧️ Hujan</span>
+                                <span class="badge bg-success">🌈 Pelangi</span>
+                                <span class="badge bg-info">❄️ Rime</span>
+                                <span class="badge bg-warning text-dark">🌪️ Badai Pasir</span>
+                                <span class="badge bg-light text-dark">❄️ Salju</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <p class="text-center text-white mt-3 opacity-75">
+                    Praktikum Kecerdasan Buatan — Wifa Saputra Mahendra
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let selectedFile = null;
+
+        // Drag & Drop
+        const uploadArea = document.getElementById('uploadArea');
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) handleFile(file);
+        });
+
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            if (e.target.files[0]) handleFile(e.target.files[0]);
+        });
+
+        function handleFile(file) {
+            selectedFile = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('preview-img').src = e.target.result;
+                document.getElementById('preview-section').style.display = 'block';
+                document.getElementById('uploadArea').style.display = 'none';
+                document.getElementById('result-section').style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function predictImage() {
+            if (!selectedFile) return;
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result-section').style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            fetch('/predict', { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('loading').style.display = 'none';
+
+                    if (data.error) {
+                        alert('Error: ' + data.error);
+                        return;
+                    }
+
+                    document.getElementById('result-emoji').textContent = data.emoji;
+                    document.getElementById('result-label-id').textContent = data.label_id;
+                    document.getElementById('result-label-en').textContent = '(' + data.label + ')';
+                    document.getElementById('result-confidence').textContent = data.confidence + '%';
+                    document.getElementById('confidence-bar').style.width = data.confidence + '%';
+
+                    // Top 3
+                    const top3Html = data.top3.map((item, i) => `
+                        <div class="top3-item d-flex justify-content-between align-items-center">
+                            <span>${i+1}. ${item.emoji} ${item.label_id}</span>
+                            <span class="badge bg-primary">${item.confidence}%</span>
+                        </div>
+                    `).join('');
+                    document.getElementById('top3-container').innerHTML = top3Html;
+
+                    document.getElementById('result-section').style.display = 'block';
+                })
+                .catch(err => {
+                    document.getElementById('loading').style.display = 'none';
+                    alert('Terjadi error: ' + err);
+                });
+        }
+
+        function resetForm() {
+            selectedFile = null;
+            document.getElementById('fileInput').value = '';
+            document.getElementById('preview-section').style.display = 'none';
+            document.getElementById('uploadArea').style.display = 'block';
+            document.getElementById('result-section').style.display = 'none';
+            document.getElementById('loading').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

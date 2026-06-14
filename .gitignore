@@ -1,0 +1,6 @@
+venv/
+__pycache__/
+*.pyc
+static/uploads/*
+!static/uploads/.gitkeep
+model/weather_model.h5
