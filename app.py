@@ -24,12 +24,8 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 if not os.path.exists(MODEL_PATH):
     print("⏳ Downloading model dari Google Drive...")
-    gdown.download(
-        id=GDRIVE_FILE_ID,
-        output=MODEL_PATH,
-        quiet=False,
-        fuzzy=True
-    )
+    url = f'https://drive.google.com/uc?id={GDRIVE_FILE_ID}&export=download&confirm=t'
+    gdown.download(url, MODEL_PATH, quiet=False)
     print("✅ Model berhasil didownload!")
 
 print("⏳ Loading model...")
